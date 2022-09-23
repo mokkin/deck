@@ -1,4 +1,27 @@
 <?php
+/**
+ * @copyright Copyright (c) 2016 Julius Härtl <jus@bitgrid.net>
+ *
+ * @author Julius Härtl <jus@bitgrid.net>
+ * @author Maxence Lange <maxence@artificial-owl.com>
+ *
+ * @license GNU AGPL version 3 or any later version
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as
+ *  published by the Free Software Foundation, either version 3 of the
+ *  License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Affero General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
 declare(strict_types=1);
 
 namespace OCA\Deck\Validators;
@@ -8,20 +31,19 @@ use OCA\Deck\BadRequestException;
 
 abstract class BaseValidator {
 
-	private const MAX_LENGTH = 255;
-
 	/**
 	 * @return array
 	 */
-	abstract function rules();
+	abstract public function rules();
 
 	/**
 	 * Validate given entries
 	 *
 	 * @param array $data
-	 * @return bool
+	 * @return void
+	 * @throws BadRequestException
 	 */
-	private function validate ($data) {
+	private function validate($data) {
 		$rules = $this->rules();
 
 		foreach ($data as $field => $value) {
@@ -38,7 +60,6 @@ abstract class BaseValidator {
 							throw new BadRequestException(
 								$this->getErrorMessage($rule, $field, $parameter));
 						}
-
 					} else {
 						if (!$this->{$rule}($value)) {
 							throw new BadRequestException(
@@ -52,52 +73,71 @@ abstract class BaseValidator {
 				throw new BadRequestException($field . ' must be provided');
 			}
 		}
-
-		return true;
 	}
 
 	/**
 	 * @param array $data
+	 * @return void
+	 * @throws BadRequestException
+	 */
+	public function check(array $data) {
+		$this->validate($data);
+	}
+
+	/**
+	 * @param $value
 	 * @return bool
 	 */
-	public function check(array $data)
-	{
-		return $this->validate($data);
-	}
-
-	// TODO: check length base on the database field length
-	private function checkLength ($value) {
-		if (!is_string($value)) return true;
-		return strlen($value) <= self::MAX_LENGTH;
-	}
-
-	private function numeric ($value) {
+	private function numeric($value): bool {
 		return is_numeric($value);
 	}
 
-	private function bool ($value) {
+	/**
+	 * @param $value
+	 * @return bool
+	 */
+	private function bool($value): bool {
 		return is_bool($value);
 	}
 
-	private function not_false ($value) {
+	/**
+	 * @param $value
+	 * @return bool
+	 */
+	private function not_false($value): bool {
 		return ($value !== false) && ($value !== 'false');
 	}
 
-	private function not_null ($value) {
+	/**
+	 * @param $value
+	 * @return bool
+	 */
+	private function not_null($value): bool {
 		return !is_null($value);
 	}
 
-	private function not_empty ($value) {
+	/**
+	 * @param $value
+	 * @return bool
+	 */
+	private function not_empty($value): bool {
 		return !empty($value);
 	}
-	private function max ($value, $limit) {
+
+	/**
+	 * @throws Exception
+	 */
+	private function max($value, $limit): bool {
 		if (!$limit || !is_numeric($limit)) {
 			throw new Exception("Validation rule max requires at least 1 parameter. " . json_encode($limit));
 		}
 		return $this->getSize($value) <= $limit;
 	}
 
-	private function min ($value, $limit) {
+	/**
+	 * @throws Exception
+	 */
+	private function min($value, $limit): bool {
 		if (!$limit || !is_numeric($limit)) {
 			throw new Exception("Validation rule max requires at least 1 parameter.");
 		}
@@ -105,26 +145,31 @@ abstract class BaseValidator {
 	}
 
 	/**
-     * Get the size of an attribute.
-     *
-     * @param  mixed  $value
-     * @return mixed
-     */
-    protected function getSize($value)
-    {
-        // This method will determine if the attribute is a number or string and
-        // return the proper size accordingly. If it is a number, then number itself
-        // is the size.
-        if (is_numeric($value)) {
-            return $value;
-        } elseif (is_array($value)) {
-            return count($value);
-        }
+	 * Get the size of an attribute.
+	 *
+	 * @param  mixed  $value
+	 * @return mixed
+	 */
+	protected function getSize($value): mixed {
+		// This method will determine if the attribute is a number or string and
+		// return the proper size accordingly. If it is a number, then number itself
+		// is the size.
+		if (is_numeric($value)) {
+			return $value;
+		} elseif (is_array($value)) {
+			return count($value);
+		}
 
-        return mb_strlen($value ?? '');
-    }
+		return mb_strlen($value ?? '');
+	}
 
-	protected function getErrorMessage($rule, $field, $parameter = null) {
+	/**
+	 * @param $rule
+	 * @param $field
+	 * @param $parameter
+	 * @return string
+	 */
+	protected function getErrorMessage($rule, $field, $parameter = null): string {
 		if (in_array($rule, ['max', 'min'])) {
 			return $rule === 'max'
 			? $field . ' cannot be longer than '. $parameter . ' characters '

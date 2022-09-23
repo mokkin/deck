@@ -285,11 +285,7 @@ class StackService {
 	 * @throws BadRequestException
 	 */
 	public function update($id, $title, $boardId, $order, $deletedAt) {
-		$this->stackServiceValidator->check(compact('title', 'boardId', 'order'));
-
-		if (is_numeric($id) === false) {
-			throw new BadRequestException('stack id must be a number');
-		}
+		$this->stackServiceValidator->check(compact('id', 'title', 'boardId', 'order'));
 
 		$this->permissionService->checkPermission($this->stackMapper, $id, Acl::PERMISSION_MANAGE);
 		$this->permissionService->checkPermission($this->boardMapper, $boardId, Acl::PERMISSION_MANAGE);
@@ -325,13 +321,7 @@ class StackService {
 	 * @throws BadRequestException
 	 */
 	public function reorder($id, $order) {
-		if (is_numeric($id) === false) {
-			throw new BadRquestException('id must be a number');
-		}
-
-		if ($order === false || $order === null) {
-			throw new BadRequestException('order must be provided');
-		}
+		$this->stackServiceValidator->check(compact('id', 'order'));
 
 		$this->permissionService->checkPermission($this->stackMapper, $id, Acl::PERMISSION_MANAGE);
 		$stackToSort = $this->stackMapper->find($id);
